@@ -1,0 +1,15 @@
+{
+  "name": "Arabic Hunt Battle",
+  "short_name": "Arabic Hunt",
+  "description": "Multiplayer Arabic object hunt in 3D and AR.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#061a3a",
+  "theme_color": "#071a3f",
+  "icons": [
+    {"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
