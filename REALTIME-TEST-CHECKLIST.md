@@ -1,60 +1,30 @@
-# v0.4 Realtime Test Checklist
+# v0.4.1 Realtime Test Checklist
 
-## A. Two-player baseline
-- [ ] Phone A Guest login works.
-- [ ] Phone B Guest login works.
-- [ ] A creates 2-player 3D room.
-- [ ] B joins by room code.
-- [ ] Presence shows both connected.
-- [ ] A toggles Ready.
-- [ ] B toggles Ready.
-- [ ] Start stays disabled until both ready.
-- [ ] Host starts match.
-- [ ] Both clients show the same target list.
-- [ ] 3-second countdown is synchronized.
-- [ ] Timer is derived from server timestamps.
+## Authentication
+- [ ] First admin can login with username/password.
+- [ ] Google button is absent.
+- [ ] Guest button is absent.
+- [ ] Admin → User Accounts loads account list.
+- [ ] Admin can create `player01` and `player02`.
+- [ ] Player account cannot access admin routes.
+- [ ] Reset Password works.
+- [ ] Deactivated user cannot login through the app.
 
-## B. Claim race
-- [ ] A and B tap the same target almost simultaneously.
-- [ ] Exactly one player receives points.
-- [ ] The target shows claimed on both devices.
-- [ ] Losing request does not overwrite the claim.
-- [ ] Wrong non-target tap subtracts 15.
-- [ ] Combo increments only on accepted claims.
-- [ ] Wrong tap resets combo.
+## Two-phone realtime
+- [ ] Phone A logs in as `player01`.
+- [ ] Phone B logs in as `player02`.
+- [ ] Phone A creates a 2-player room.
+- [ ] Phone B joins by room code.
+- [ ] Presence updates both users.
+- [ ] Ready state syncs.
+- [ ] Countdown begins at the same server time.
+- [ ] Same seed and target list appear on both phones.
+- [ ] Simultaneous claim gives points to only one phone.
+- [ ] Wrong tap penalty persists.
+- [ ] Score survives refresh/reconnect.
 
-## C. Reconnect
-- [ ] Refresh Phone B mid-match.
-- [ ] Session restores.
-- [ ] Active match restores from local match id.
-- [ ] Claimed targets restore correctly.
-- [ ] Score restores correctly.
-- [ ] Timer restores from server `ends_at`.
-- [ ] Realtime channel reconnects.
-
-## D. Admin spectator
-- [ ] Open `?admin=1` on laptop.
-- [ ] Admin creates match for 4 players.
-- [ ] Admin appears as spectator, not 1/4 player.
-- [ ] Four separate players can still join.
-- [ ] Admin sees scores update.
-- [ ] Admin sees pose markers when players move cameras.
-- [ ] Pause freezes official remaining time.
-- [ ] Resume assigns a new `ends_at`.
-
-## E. Capacity
-Repeat using:
-- [ ] 2 players
-- [ ] 4 players
-- [ ] 6 players
-- [ ] 8 players
-
-## F. Adversarial / edge cases
-- [ ] Ninth player cannot join an 8-player room.
-- [ ] User outside the room cannot subscribe to its private Realtime topic.
-- [ ] User outside the room cannot query targets/players due to RLS.
-- [ ] Non-host cannot call start/pause/resume successfully.
-- [ ] Claims before start are rejected.
-- [ ] Claims while paused are rejected.
-- [ ] Claims after timer expires are rejected.
-- [ ] Duplicate target claims cannot both score.
+## Admin spectator
+- [ ] Admin creates match without consuming player slot.
+- [ ] Admin sees live player score.
+- [ ] Admin receives pose telemetry.
+- [ ] Pause/resume is synchronized.

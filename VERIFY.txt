@@ -1,12 +1,17 @@
-Arabic Hunt Battle v0.4.0 verification
-=======================================
+Arabic Hunt Battle v0.4.1 verification
+
 PASS: TypeScript `tsc --noEmit`
-PASS: package version updated to 0.4.0
-PASS: PWA cache version updated to ahb-shell-v0.4.0
-PASS: v0.4 migration included after v0.3 initial migration
-PASS: private Realtime client channel configured
-PASS: atomic server-authoritative claim RPC included
-PASS: admin spectator excluded from participant capacity
-LIMITATION: npm install timed out in artifact environment; Vite bundle could not be executed here.
-REQUIRED LOCALLY: npm install && npm run build
-REQUIRED SUPABASE: run both migrations, enable Anonymous Auth if using Guest, disable Realtime public channel access, fill .env.
+PASS: Google/Guest auth hooks removed from src
+PASS: username/password AuthService added
+PASS: admin account manager UI added
+PASS: admin user Edge Function source added
+PASS: admin credential migration added
+PASS: PWA cache version updated to ahb-shell-v0.4.1
+
+Required Supabase steps:
+1. Run all 3 migrations.
+2. Keep Email/password auth enabled.
+3. Disable public new-user signup and Anonymous auth.
+4. Bootstrap first admin.
+5. Deploy `admin-users` Edge Function.
+6. Fill frontend .env with URL + publishable key only.

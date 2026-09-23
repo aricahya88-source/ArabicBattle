@@ -1,4 +1,4 @@
-const CACHE = 'ahb-shell-v0.4.0';
+const CACHE = 'ahb-shell-v0.4.1';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

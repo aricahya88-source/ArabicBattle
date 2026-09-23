@@ -10,6 +10,7 @@ import { cloudEnabled } from './services/supabase';
 import { AuthService, type AppUser } from './services/AuthService';
 import { MatchService } from './services/MatchService';
 import { RealtimeRoom } from './services/RealtimeRoom';
+import { AdminUserService, type AdminAccount } from './services/AdminUserService';
 import type { MatchSnapshot, RoomEvent } from './services/realtimeTypes';
 
 const root=document.getElementById('app')!;
@@ -18,12 +19,16 @@ const realtimeHunt=new RealtimeHuntEngine();
 const auth=new AuthService();
 const matches=new MatchService();
 const realtime=new RealtimeRoom();
+const adminUsers=new AdminUserService();
 
 let hunt:HuntLike=localHunt;
 let user:AppUser|null=null;
 let match:MatchSnapshot|null=null;
 let presence:Record<string,any[]>={};
 let connectionStatus=cloudEnabled?'idle':'local';
+let adminAccounts:AdminAccount[]=[];
+let accountsLoading=false;
+let accountsLoaded=false;
 let route:Route=(location.hash.slice(1) as Route)||(new URLSearchParams(location.search).has('admin')?'admin-dashboard':'splash');
 let scene:PlayCanvasScene|null=null;
 let xr:XRManager|null=null;
@@ -37,19 +42,20 @@ const poses=new Map<string,any>();
 function ensureLocalHunt(){if(!localHunt.targets.length){const candidates=STUDENT_ROOM.objects.filter(o=>o.interactive&&o.vocabId).map(o=>({id:o.id,vocabId:o.vocabId!}));localHunt.start(candidates,12,7358291)}}
 function useLocalHunt(){hunt=localHunt;ensureLocalHunt()}
 function useRealtimeHunt(){if(match&&user){realtimeHunt.sync(match,user.id);hunt=realtimeHunt}}
-function go(r:Route,push=true){if(push&&route!==r)history.push(route);route=r;location.hash=r;render()}
+function go(r:Route,push=true){if(r.startsWith('admin-')&&user?.role!=='admin'){showError(new Error('Halaman admin hanya untuk akun admin.'));r=user?'home':'splash'}if(push&&route!==r)history.push(route);route=r;location.hash=r;render()}
 function back(){go(history.pop()||'home',false)}
 function saveMatch(){if(match)localStorage.setItem('ahb.activeMatchId',match.match.id);else localStorage.removeItem('ahb.activeMatchId')}
 
 function render(){
   clearInterval(timerHandle); if(route!=='ar-place'){scene=null;xr=null;}
   if(route==='hunt3d'&&match)useRealtimeHunt(); else if(['hunt3d','hunt-ar','result'].includes(route)&&!match)useLocalHunt();
-  root.innerHTML=renderPage({route,hunt,arStatus:statusOnly(),arPlaced,cloudEnabled,user,match,connectionStatus,presence});
+  root.innerHTML=renderPage({route,hunt,arStatus:statusOnly(),arPlaced,cloudEnabled,user,match,connectionStatus,presence,accounts:adminAccounts,accountsLoading});
   bind();
   if(route==='hunt3d'||route==='hunt-ar')mountScene(route==='hunt-ar');
   if(route==='ar-place'&&!scene)mountARPreview();
   if(route==='admin-live')startClock();
   updateAdminPoses();
+  if(route==='admin-accounts'&&user?.role==='admin'&&!accountsLoaded&&!accountsLoading)window.setTimeout(()=>loadAccounts(false),0);
 }
 function statusOnly(){const nav:any=navigator;const known=xr?.status?.();return known||{webxr:!!nav.xr,ar:!!nav.xr,hitTest:!!nav.xr,anchors:!!nav.xr}}
 
@@ -57,9 +63,14 @@ function bind(){
   root.querySelectorAll<HTMLElement>('[data-go]').forEach(el=>el.onclick=()=>go(el.dataset.go as Route));
   root.querySelectorAll<HTMLElement>('[data-nav]').forEach(el=>el.onclick=()=>go(el.dataset.nav as Route));
   root.querySelector('[data-action="back"]')?.addEventListener('click',back);
-  root.querySelector('[data-action="google-login"]')?.addEventListener('click',()=>run(async()=>{await auth.google()}));
-  root.querySelector('[data-action="guest-login"]')?.addEventListener('click',()=>run(async()=>{user=await auth.guest(`Player-${Math.floor(100+Math.random()*900)}`);go('home')}));
-  root.querySelector('[data-action="sign-out"]')?.addEventListener('click',()=>run(async()=>{await leaveMatch();await auth.signOut();user=null;go('splash')}));
+  root.querySelector('#login-form')?.addEventListener('submit',e=>{e.preventDefault();void loginAccount()});
+  root.querySelector('[data-action="toggle-password"]')?.addEventListener('click',()=>togglePassword('login-password'));
+  root.querySelector('[data-action="toggle-account-password"]')?.addEventListener('click',()=>togglePassword('account-password'));
+  root.querySelector('[data-action="sign-out"]')?.addEventListener('click',()=>run(async()=>{await leaveMatch();await auth.signOut();user=null;adminAccounts=[];accountsLoaded=false;go('splash')}));
+  root.querySelector('[data-action="admin-create-user"]')?.addEventListener('click',()=>void createAdminUser());
+  root.querySelector('[data-action="refresh-accounts"]')?.addEventListener('click',()=>void loadAccounts(true));
+  root.querySelectorAll<HTMLElement>('[data-action="reset-user-password"]').forEach(el=>el.addEventListener('click',()=>void resetUserPassword(el.dataset.userId!,el.dataset.userName||'user')));
+  root.querySelectorAll<HTMLElement>('[data-action="toggle-user-active"]').forEach(el=>el.addEventListener('click',()=>void toggleUserActive(el.dataset.userId!,el.dataset.active!=='1')));
   root.querySelector('[data-action="create-room"]')?.addEventListener('click',()=>createRoom(false));
   root.querySelector('[data-action="admin-create-room"]')?.addEventListener('click',()=>createRoom(true));
   root.querySelector('[data-action="join-room"]')?.addEventListener('click',joinRoom);
@@ -74,9 +85,43 @@ function bind(){
   root.querySelectorAll<HTMLElement>('[data-speak]').forEach(el=>el.onclick=()=>speak(el.dataset.speak!));
 }
 
-async function ensureUser(name='Player'){if(user)return user;user=await auth.guest(name);return user}
+async function ensureUser(_name='Player'){if(user)return user;throw new Error('Silakan login memakai username dan password yang diberikan admin.');}
+
+async function loginAccount(){await run(async()=>{
+  const username=root.querySelector<HTMLInputElement>('#login-username')?.value||'';
+  const password=root.querySelector<HTMLInputElement>('#login-password')?.value||'';
+  user=await auth.login(username,password);
+  accountsLoaded=false;
+  go(user.role==='admin'?'admin-dashboard':'home',false);
+})}
+function togglePassword(id:string){const el=root.querySelector<HTMLInputElement>(`#${id}`);if(el)el.type=el.type==='password'?'text':'password'}
+async function loadAccounts(force=false){
+  if(user?.role!=='admin'||!cloudEnabled)return;
+  if(accountsLoading||(!force&&accountsLoaded))return;
+  accountsLoading=true;render();
+  try{adminAccounts=await adminUsers.list();accountsLoaded=true;}catch(e){showError(e)}finally{accountsLoading=false;render()}
+}
+async function createAdminUser(){await run(async()=>{
+  if(user?.role!=='admin')throw new Error('Hanya admin yang dapat membuat akun.');
+  const q=(id:string)=>root.querySelector<HTMLInputElement|HTMLSelectElement>(`#${id}`);
+  const username=q('account-username')?.value||'';
+  const displayName=q('account-display-name')?.value||'';
+  const password=q('account-password')?.value||'';
+  const role=(q('account-role')?.value||'player') as 'admin'|'player';
+  if(!displayName.trim())throw new Error('Nama tampilan wajib diisi.');
+  if(password.length<8)throw new Error('Password minimal 8 karakter.');
+  await adminUsers.create({username,displayName,password,role});
+  accountsLoaded=false;await loadAccounts(true);alert(`Akun @${username.trim().toLowerCase()} berhasil dibuat.`);
+})}
+async function resetUserPassword(userId:string,username:string){
+  const password=prompt(`Password baru untuk @${username} (minimal 8 karakter):`);if(password===null)return;
+  await run(async()=>{if(password.length<8)throw new Error('Password minimal 8 karakter.');await adminUsers.resetPassword(userId,password);alert('Password berhasil direset.');});
+}
+async function toggleUserActive(userId:string,active:boolean){await run(async()=>{await adminUsers.setActive(userId,active);accountsLoaded=false;await loadAccounts(true)})}
+
 async function createRoom(admin:boolean){await run(async()=>{
   await ensureUser(admin?'Admin':'Player');
+  if(admin&&user?.role!=='admin')throw new Error('Hanya admin yang dapat membuat match dari dashboard admin.');
   if(!cloudEnabled){if(admin)throw new Error('Admin realtime membutuhkan Supabase. Isi .env lalu jalankan migration.');useLocalHunt();go('hunt3d');return;}
   const q=(id:string)=>root.querySelector<HTMLInputElement|HTMLSelectElement>(`#${id}`);
   const opt={
@@ -165,7 +210,19 @@ window.addEventListener('offline',()=>{connectionStatus='offline';renderSoft()})
 if(import.meta.env.PROD&&'serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 
 async function bootstrap(){
-  if(cloudEnabled){try{user=await auth.restore();const id=localStorage.getItem('ahb.activeMatchId');if(user&&id){match=await matches.snapshot(id);useRealtimeHunt();await connectRealtime();if(match.match.status==='running'||match.match.status==='countdown'||match.match.status==='paused')route=route.startsWith('admin-')?'admin-live':'hunt3d';else if(match.match.status==='waiting')route=route.startsWith('admin-')?'admin-lobby':'lobby';}else if(user&&route==='splash')route='home';}catch(e){console.warn('restore failed',e);localStorage.removeItem('ahb.activeMatchId')}}
+  if(cloudEnabled){try{
+    user=await auth.restore();
+    if(user){
+      if(route.startsWith('admin-')&&user.role!=='admin')route='home';
+      const id=localStorage.getItem('ahb.activeMatchId');
+      if(id){
+        match=await matches.snapshot(id);useRealtimeHunt();await connectRealtime();
+        if(match.match.status==='running'||match.match.status==='countdown'||match.match.status==='paused')route=user.role==='admin'&&route.startsWith('admin-')?'admin-live':'hunt3d';
+        else if(match.match.status==='waiting')route=user.role==='admin'&&route.startsWith('admin-')?'admin-lobby':'lobby';
+      }else if(route==='splash')route=user.role==='admin'?'admin-dashboard':'home';
+    }else route='splash';
+  }catch(e){console.warn('restore failed',e);localStorage.removeItem('ahb.activeMatchId');user=null;route='splash'}}
+  else route='splash';
   render();
 }
 bootstrap();

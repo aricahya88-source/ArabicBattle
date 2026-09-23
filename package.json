@@ -1,7 +1,7 @@
 {
   "name": "arabic-hunt-battle",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -20,5 +20,5 @@
     "typescript": "5.9.2",
     "vite": "8.3.0"
   },
-  "description": "Arabic Hunt Battle v0.4.0 realtime multiplayer core"
+  "description": "Arabic Hunt Battle v0.4.1 admin-provisioned username/password auth"
 }

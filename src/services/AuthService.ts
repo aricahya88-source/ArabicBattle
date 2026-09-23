@@ -1,45 +1,73 @@
 import { supabase } from './supabase';
 
-export interface AppUser { id:string; name:string; email?:string|null; anonymous:boolean; }
+export type AppRole='admin'|'player';
+export interface AppUser{
+  id:string;
+  name:string;
+  username:string;
+  role:AppRole;
+  active:boolean;
+  email?:string|null;
+  anonymous:false;
+}
 
-export class AuthService {
+const LOGIN_DOMAIN='login.arabichuntbattle.app';
+export function normalizeUsername(value:string){
+  return value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');
+}
+export function loginEmail(username:string){
+  const clean=normalizeUsername(username);
+  if(clean.length<3)throw new Error('Username minimal 3 karakter.');
+  return `${clean}@${LOGIN_DOMAIN}`;
+}
+
+export class AuthService{
   private current:AppUser|null=null;
+
   async restore():Promise<AppUser|null>{
     if(!supabase)return null;
-    const {data}=await supabase.auth.getSession();
+    const {data,error}=await supabase.auth.getSession();
+    if(error)throw error;
     const u=data?.session?.user;
     if(!u)return null;
-    this.current=this.map(u);
-    await this.ensureProfile(this.current);
+    this.current=await this.mapWithProfile(u);
+    if(!this.current.active){await supabase.auth.signOut();this.current=null;return null;}
     return this.current;
   }
-  async guest(name='Player'):Promise<AppUser>{
-    if(!supabase){this.current={id:'local-player',name,anonymous:true};return this.current;}
-    let {data}=await supabase.auth.getSession();
-    if(!data?.session){
-      const res=await supabase.auth.signInAnonymously({options:{data:{display_name:name}}});
-      if(res.error)throw res.error;
-      data={session:res.data.session};
-    }
-    const u=data.session!.user;
-    this.current=this.map(u,name);
-    await this.ensureProfile(this.current);
-    return this.current;
+
+  async login(username:string,password:string):Promise<AppUser>{
+    if(!supabase)throw new Error('Supabase belum dikonfigurasi. Login akun membutuhkan backend Supabase.');
+    const clean=normalizeUsername(username);
+    if(!clean)throw new Error('Masukkan username.');
+    if(!password)throw new Error('Masukkan password.');
+    const {data,error}=await supabase.auth.signInWithPassword({email:loginEmail(clean),password});
+    if(error)throw new Error('Username atau password salah.');
+    if(!data.user)throw new Error('Login gagal.');
+    const mapped=await this.mapWithProfile(data.user,clean);
+    if(!mapped.active){await supabase.auth.signOut();throw new Error('Akun dinonaktifkan oleh admin.');}
+    this.current=mapped;
+    return mapped;
   }
-  async google():Promise<void>{
-    if(!supabase)throw new Error('Supabase belum dikonfigurasi.');
-    const redirectTo=location.origin+location.pathname;
-    const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo}});
-    if(error)throw error;
-  }
+
   get user(){return this.current;}
   async signOut(){if(supabase)await supabase.auth.signOut();this.current=null;}
-  private map(u:any,fallback='Player'):AppUser{
-    return {id:u.id,name:u.user_metadata?.display_name||u.user_metadata?.full_name||u.email?.split('@')[0]||fallback,email:u.email,anonymous:!!u.is_anonymous};
-  }
-  private async ensureProfile(user:AppUser){
-    if(!supabase||user.id==='local-player')return;
-    const {error}=await supabase.from('profiles').upsert({id:user.id,display_name:user.name},{onConflict:'id'});
+
+  private async mapWithProfile(u:any,fallback='player'):Promise<AppUser>{
+    if(!supabase)throw new Error('Supabase belum dikonfigurasi.');
+    const {data,error}=await supabase.from('profiles')
+      .select('username,display_name,role,active')
+      .eq('id',u.id)
+      .maybeSingle();
     if(error)throw error;
+    if(!data)throw new Error('Profil akun belum dibuat. Hubungi admin.');
+    return {
+      id:u.id,
+      username:data.username||fallback,
+      name:data.display_name||data.username||fallback,
+      role:(data.role||'player') as AppRole,
+      active:data.active!==false,
+      email:u.email,
+      anonymous:false
+    };
   }
 }

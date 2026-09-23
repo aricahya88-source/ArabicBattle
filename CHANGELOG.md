@@ -1,7 +1,19 @@
 # Changelog
 
+## 0.4.1
+- Removed Google OAuth UI and flow.
+- Removed Guest / Anonymous login UI and flow.
+- Added admin-provisioned username/password login.
+- Added `username`, `role`, `active`, and `created_by` profile fields.
+- Added Admin → User Accounts page.
+- Added server-side account creation Edge Function.
+- Added server-side password reset.
+- Added activate/deactivate account control.
+- Added admin route authorization in the client.
+- Added first-admin bootstrap guide.
+- Kept v0.4 server-authoritative realtime gameplay unchanged.
+
 ## 0.4.0
-- Added Supabase Auth service and Guest/Google entry hooks.
 - Added server-side create/join/ready/start/pause/resume/finish RPCs.
 - Added atomic `claim_hunt_target` scoring RPC.
 - Added private Realtime Broadcast + Presence channel per match.
@@ -12,5 +24,4 @@
 - Added reconnect snapshot restore.
 - Added live scoreboard backed by PostgreSQL.
 - Added throttled player camera pose telemetry for admin monitor.
-- Added local fallback/demo when Supabase is not configured.
 - Kept AR Battle separate from realtime 3D Battle.
