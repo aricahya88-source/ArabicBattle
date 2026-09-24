@@ -10,3 +10,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+declare module 'qrcode' {
+  export function toDataURL(text:string, options?:any):Promise<string>;
+}
+declare module 'bootstrap-icons/font/bootstrap-icons.css';

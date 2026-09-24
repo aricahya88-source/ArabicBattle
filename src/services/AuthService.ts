@@ -41,7 +41,12 @@ export class AuthService{
     if(!clean)throw new Error('Masukkan username.');
     if(!password)throw new Error('Masukkan password.');
     const {data,error}=await supabase.auth.signInWithPassword({email:loginEmail(clean),password});
-    if(error)throw new Error('Username atau password salah.');
+    if(error){
+      const message=String(error.message||'');
+      if(/invalid login credentials/i.test(message))throw new Error('Username atau password salah.');
+      if(/email.*not confirmed/i.test(message))throw new Error('Akun belum dikonfirmasi di Supabase Auth.');
+      throw new Error(`Login gagal: ${message||'kesalahan autentikasi'}`);
+    }
     if(!data.user)throw new Error('Login gagal.');
     const mapped=await this.mapWithProfile(data.user,clean);
     if(!mapped.active){await supabase.auth.signOut();throw new Error('Akun dinonaktifkan oleh admin.');}

@@ -1,17 +1,14 @@
-Arabic Hunt Battle v0.4.1 verification
+Arabic Hunt Battle v0.7.0 verification notes
 
-PASS: TypeScript `tsc --noEmit`
-PASS: Google/Guest auth hooks removed from src
-PASS: username/password AuthService added
-PASS: admin account manager UI added
-PASS: admin user Edge Function source added
-PASS: admin credential migration added
-PASS: PWA cache version updated to ahb-shell-v0.4.1
+Static/type verification in build workspace:
+- TypeScript: tsc --noEmit PASS
+- AR mode feature flag enabled
+- AR flow uses existing server-authoritative Supabase match/claim RPCs
+- v0.7 SQL patch is non-destructive and adds AR leaderboard
+- WebXR lifecycle/hit test/DOM overlay code targets PlayCanvas 2.22.x APIs
 
-Required Supabase steps:
-1. Run all 3 migrations.
-2. Keep Email/password auth enabled.
-3. Disable public new-user signup and Anonymous auth.
-4. Bootstrap first admin.
-5. Deploy `admin-users` Edge Function.
-6. Fill frontend .env with URL + publishable key only.
+Not hardware-verified in this build environment:
+- Immersive AR camera session
+- real-device hit-test quality
+- anchor availability
+These require a compatible physical WebXR device over HTTPS. Run REALTIME-TEST-CHECKLIST.md before classroom deployment.

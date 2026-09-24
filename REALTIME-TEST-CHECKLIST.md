@@ -1,30 +1,38 @@
-# v0.4.1 Realtime Test Checklist
+# Realtime + AR QA Checklist — v0.7.0
 
-## Authentication
-- [ ] First admin can login with username/password.
-- [ ] Google button is absent.
-- [ ] Guest button is absent.
-- [ ] Admin → User Accounts loads account list.
-- [ ] Admin can create `player01` and `player02`.
-- [ ] Player account cannot access admin routes.
-- [ ] Reset Password works.
-- [ ] Deactivated user cannot login through the app.
+## 3D regression
+- [ ] 2 players create/join/ready/start/end
+- [ ] correct target updates score globally
+- [ ] wrong target = -15
+- [ ] duplicate simultaneous claim only rewards one player
+- [ ] pause/resume works
+- [ ] reconnect restores match state
 
-## Two-phone realtime
-- [ ] Phone A logs in as `player01`.
-- [ ] Phone B logs in as `player02`.
-- [ ] Phone A creates a 2-player room.
-- [ ] Phone B joins by room code.
-- [ ] Presence updates both users.
-- [ ] Ready state syncs.
-- [ ] Countdown begins at the same server time.
-- [ ] Same seed and target list appear on both phones.
-- [ ] Simultaneous claim gives points to only one phone.
-- [ ] Wrong tap penalty persists.
-- [ ] Score survives refresh/reconnect.
+## AR device/session
+- [ ] Vercel HTTPS URL
+- [ ] WebXR preflight passes on compatible Android device
+- [ ] Start AR only begins after explicit user tap
+- [ ] hit-test reticle appears on table/floor
+- [ ] Place Arena locks miniature world
+- [ ] optional anchor shows Anchored when supported
+- [ ] Reset clears placement
+- [ ] rotate left/right changes orientation but not scale
+- [ ] ending AR session before start automatically clears Ready
 
-## Admin spectator
-- [ ] Admin creates match without consuming player slot.
-- [ ] Admin sees live player score.
-- [ ] Admin receives pose telemetry.
-- [ ] Pause/resume is synchronized.
+## AR multiplayer
+- [ ] Admin creates mode=AR
+- [ ] 2 AR players join same room
+- [ ] each player independently places the identical miniature world
+- [ ] Ready disabled until placement
+- [ ] admin cannot start until >=2 players and all participants Ready
+- [ ] synchronized countdown
+- [ ] AR select/tap claims correct object
+- [ ] same target cannot score twice across devices
+- [ ] score/activity changes live on admin laptop
+- [ ] virtual pose markers move in admin spectator
+- [ ] Pause blocks AR claims; Resume restores claims
+- [ ] AR session loss during running shows setup overlay and allows re-entry/re-placement
+- [ ] match end shows result and contributes to AR leaderboard
+
+## Scale tests
+Repeat AR multiplayer with 2, 4, 6 and 8 players. Test slow connection, refresh, host disconnect, duplicate claim and wrong-tap spam.

@@ -1,27 +1,21 @@
 # Changelog
 
-## 0.4.1
-- Removed Google OAuth UI and flow.
-- Removed Guest / Anonymous login UI and flow.
-- Added admin-provisioned username/password login.
-- Added `username`, `role`, `active`, and `created_by` profile fields.
-- Added Admin → User Accounts page.
-- Added server-side account creation Edge Function.
-- Added server-side password reset.
-- Added activate/deactivate account control.
-- Added admin route authorization in the client.
-- Added first-admin bootstrap guide.
-- Kept v0.4 server-authoritative realtime gameplay unchanged.
+## v0.7.0 — WebXR AR Battle
+- Enabled competitive AR Battle for Student Room and Kitchen.
+- Added HTTPS/WebXR/immersive-ar device preflight.
+- Added immersive AR lifecycle, DOM Overlay, hit-test reticle and surface placement.
+- Added optional WebXR Anchor placement with hit-test fallback.
+- Fixed AR fairness at a common miniature scale; players can rotate but not resize the arena.
+- Added AR setup/Ready flow without tearing down the WebXR session.
+- Added WebXR select-ray object picking plus touch fallback.
+- Added AR virtual-coordinate telemetry for admin 3D spectator / Top View.
+- Added AR reconnect/re-entry behavior and automatic Not Ready when placement/session is lost before start.
+- Reused server-authoritative claim/scoring, pause/resume, first-claim locking and match finalization across 3D and AR.
+- Added separate AR leaderboard RPC/UI.
+- Kept 3D Battle, Kitchen, admin spectator, QR join, classes, analytics and content tools.
 
-## 0.4.0
-- Added server-side create/join/ready/start/pause/resume/finish RPCs.
-- Added atomic `claim_hunt_target` scoring RPC.
-- Added private Realtime Broadcast + Presence channel per match.
-- Added Realtime Authorization policy based on match membership.
-- Added Student Room server object registry and vocabulary seed.
-- Added admin spectator role that does not consume a player slot.
-- Added synchronized timestamps and countdown.
-- Added reconnect snapshot restore.
-- Added live scoreboard backed by PostgreSQL.
-- Added throttled player camera pose telemetry for admin monitor.
-- Kept AR Battle separate from realtime 3D Battle.
+## v0.6.0 — Classroom Platform
+- Kitchen, live admin 3D spectator, pause/resume, projectors, QR, practice, classes, analytics and content tools.
+
+## v0.5.0 — Stability
+- RPC ambiguity fixes, realtime partition safety, target guidance and performance pass.

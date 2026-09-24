@@ -23,7 +23,7 @@ Use direct **Create user** / confirmed user, not an email invitation. This addre
 
 ## B. Promote that user to administrator
 
-After running all three migrations, open SQL Editor and run:
+After running all required migrations through v0.6.0, open SQL Editor and run:
 
 ```sql
 update public.profiles

@@ -1,137 +1,80 @@
-# Arabic Hunt Battle v0.4.1 — Admin-Provisioned Username/Password
+# Arabic Hunt Battle v0.7.0 — WebXR AR Battle
 
-**PlayCanvas Engine + Vite + TypeScript + Supabase PostgreSQL + Supabase Realtime + WebXR + PWA**
+Multiplayer Arabic vocabulary hunt built with **Vite + TypeScript + PlayCanvas Engine + WebXR + Supabase**.
 
-v0.4.1 keeps the v0.4 realtime multiplayer core, but removes Google and Guest login from the player flow. Every account is now created by an administrator and users sign in with **username + password**.
+## Playable modes
+- **3D Battle** — realtime 2–8 players.
+- **AR Battle** — realtime AR-only pool using a miniature virtual world placed on a real table/floor.
+- **Solo Practice** — local 3D practice.
+- **Tutorial** — 3-target control tutorial.
 
-## What changed
+## Playable worlds
+- Student Room
+- Kitchen
 
-- Login screen now contains only `Username` and `Password`.
-- Google OAuth button removed.
-- Guest / Anonymous login removed.
-- Added account roles: `admin` and `player`.
-- Added `active` account status.
-- Added Admin → **User Accounts** page.
-- Admin can create a username/password account.
-- Admin can reset a password.
-- Admin can activate/deactivate an account.
-- Players cannot open admin routes.
-- Account creation and password reset happen in a **Supabase Edge Function**, never with a secret/service key in the browser.
-- Realtime match, atomic claim, scoring, PWA and Student Room remain from v0.4.0.
+Visible roadmap cards: Classroom, Market, Library, Hospital, Airport, Park.
 
-## Important implementation detail
+## AR Battle flow
+1. Player selects **AR Battle**.
+2. Device check verifies HTTPS, WebXR API and `immersive-ar` support.
+3. Choose Student Room or Kitchen.
+4. Create/join an AR room.
+5. Press **Start AR** (must be a user gesture).
+6. Scan a horizontal surface until the reticle appears.
+7. Press **Place Arena**. The world uses a fixed miniature scale (~10%) for fairness.
+8. Optionally rotate the arena in 15° steps; scale is intentionally fixed.
+9. Press **Ready**. Admin/host starts only after all AR players are ready.
+10. During the match, taps/select rays claim the same server-authoritative targets used by 3D Battle.
 
-Supabase password authentication signs in with email or phone. The UI still exposes **username only**. Internally the app converts:
+AR and 3D matches are separate because `matches.game_mode` is either `3d` or `ar`. The admin can spectate both from the desktop 3D/Top View using virtual-coordinate telemetry; no player camera video is sent.
 
-```text
-ahmad01
-↓
-ahmad01@login.arabichuntbattle.app
-```
+## v0.7.0 highlights
+- WebXR immersive AR session lifecycle.
+- Surface hit testing and reticle.
+- Optional WebXR Anchor placement when supported; safe hit-test placement fallback otherwise.
+- DOM Overlay HUD during AR.
+- AR input via WebXR select ray plus DOM/touch fallback.
+- Fixed miniature scale for fairness and per-device rotation.
+- AR placement must be locked before Ready.
+- AR session loss/reset before match automatically clears Ready.
+- Re-enter/re-place AR after session interruption or page refresh.
+- Server-authoritative first claim/scoring, pause/resume, reconnect and match end shared with 3D.
+- AR virtual pose telemetry for admin spectator.
+- Separate **AR Leaderboard**.
+- Student Room + Kitchen supported in both 3D and AR.
+- Bootstrap Icons remain available in the admin/player UI.
 
-This synthetic login address is never shown to the player and no real email inbox is required. Accounts are created server-side with email already confirmed.
+## Upgrade from v0.6.0
+1. Extract this project.
+2. Copy your existing `.env` into the project root.
+3. In Supabase SQL Editor run **`APPLY-V0.7.0-PATCH.sql` once**.
+4. Keep the already deployed `admin-users` Edge Function.
+5. Run:
+   ```bash
+   npm install
+   npm run typecheck
+   npm run dev
+   ```
+6. Test 3D locally. For **AR on a phone**, use the Vercel HTTPS deployment (or another secure origin). A LAN URL such as `http://192.168.x.x:5173` is not a secure context for WebXR on normal mobile browsers.
 
-## Install
+## Fresh database
+Run migrations in order:
+1. `202609210001_initial.sql`
+2. `202609210002_realtime_multiplayer.sql`
+3. `202609230001_admin_credentials.sql`
+4. `202609230002_v050_stability.sql`
+5. `202609230003_v060_classroom_platform.sql`
+6. `202609240001_v070_ar_battle.sql`
 
-```bash
-npm install
-cp .env.example .env
-```
-
-Fill `.env`:
-
+## Environment
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxx
 ```
+Never place service-role/secret keys in Vite environment variables.
 
-Then follow **`SUPABASE-SETUP.md`** and **`ADMIN-ACCOUNT-SETUP.md`**.
+## Device notes
+WebXR AR support is device/browser dependent. The authoritative test is successfully starting an immersive AR session. The app provides a preflight check and a clear fallback message when AR is unavailable.
 
-Run:
-
-```bash
-npm run dev
-```
-
-## Required SQL migrations
-
-Run in this order:
-
-```text
-supabase/migrations/202609210001_initial.sql
-supabase/migrations/202609210002_realtime_multiplayer.sql
-supabase/migrations/202609230001_admin_credentials.sql
-```
-
-## Required Edge Function
-
-Deploy:
-
-```text
-supabase/functions/admin-users/index.ts
-```
-
-The Edge Function uses the server-side Supabase secret/service key and checks that the caller has `profiles.role = 'admin'`.
-
-## First admin
-
-The first administrator is bootstrapped once from Supabase Dashboard because there is not yet an administrator who can create another administrator. See `ADMIN-ACCOUNT-SETUP.md`.
-
-After that, all normal users can be created from:
-
-```text
-Admin Dashboard
-→ User Accounts
-→ Buat Akun
-```
-
-## Login flow
-
-```text
-ADMIN creates account
-        ↓
-username + password
-        ↓
-PLAYER opens app
-        ↓
-username + password
-        ↓
-Supabase Auth session
-        ↓
-Home / 3D Battle / Realtime Room
-```
-
-An admin account automatically enters the laptop-first Admin Dashboard after login. A player account enters the mobile Home screen.
-
-## Security model
-
-- Browser receives only `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- Supabase secret/service role is **never** stored in `.env` for Vite.
-- `supabase.auth.admin.createUser()` is called only inside the Edge Function.
-- New public signups should be disabled in Supabase Auth configuration.
-- Role elevation is never trusted from player metadata.
-- Match scoring remains server-authoritative through PostgreSQL RPCs.
-- Private Realtime channels remain protected by match membership.
-
-## Realtime test
-
-See `REALTIME-TEST-CHECKLIST.md`.
-
-Recommended first test:
-
-1. Admin creates accounts `player01` and `player02`.
-2. Phone A logs in as `player01`.
-3. Phone B logs in as `player02`.
-4. Phone A creates a 2-player 3D room.
-5. Phone B joins using the room code.
-6. Both press Ready.
-7. Start the match and race for the same target.
-8. Only the first atomic server claim receives points.
-
-## Verification
-
-`tsc --noEmit` has been run against this source tree and passes.
-
-## Next milestone
-
-After account provisioning is verified, continue with **v0.5 — 3D Multiplayer QA + Admin Spectator hardening** before connecting multiplayer to AR.
+## Vercel
+See `VERCEL-DEPLOY.md`. Add the same two public Supabase variables in Vercel Project Settings → Environment Variables. HTTPS from Vercel is required for normal phone WebXR use.
